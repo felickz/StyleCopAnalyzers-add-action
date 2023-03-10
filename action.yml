@@ -1,21 +1,21 @@
-name: 'SecurityCodeScan'
-description: 'Security Code Scan action to add NuGet packages and set up projects'
+name: 'StyleCopAnalyzers'
+description: 'StyleCop.Analyzers action to add NuGet packages and set up projects'
 branding:
   icon: 'check-circle'
   color: 'purple'
 runs:
   using: "composite"
   steps:
-    - name: Set up Security-Code-Scan
+    - name: Set up StyleCopAnalyzers
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop";
-        [string]$SecurityCodeScanPackageName = 'SecurityCodeScan.VS2019'
-        [string]$SecurityCodeScanPackagePath = $null
+        [string]$StyleCopAnalyzersPackageName = 'StyleCop.Analyzers'
+        [string]$StyleCopAnalyzersPackagePath = $null
 
-        # get the latest security code scan package version
-        $scs2019packages = Invoke-RestMethod -Uri "https://api-v2v3search-0.nuget.org/query?q=packageid:SecurityCodeScan.VS2019&top=true"
-        $SecurityCodeScanPackageVersion = ($scs2019packages.data.versions | Sort-Object  -Property version -Descending | Select-Object -First 1).version
+        # get the latest StyleCopAnalyzers package version
+        $sapackages = Invoke-RestMethod -Uri "https://api-v2v3search-0.nuget.org/query?q=packageid:StyleCop.Analyzers&top=true"
+        $StyleCopAnalyzersPackageVersion = ($sapackages.data.versions | Sort-Object  -Property version -Descending | Select-Object -First 1).version
 
         foreach ($projectFile in Get-ChildItem -Path . -Include *.csproj, *.vbproj -File -Recurse -Force) {
 
@@ -40,17 +40,17 @@ runs:
 
           # if the project is new .NET Core style or the old one, but uses PackageReference
           if ($project.Project.Sdk -or ($project.Project.ItemGroup.PackageReference | Where-Object { $_ }) -or (-not $packagesConfigFile.Exists)) {
-            # delete existing SecurityCodeScan PackageReference entities
+            # delete existing StyleCop.Analyzers PackageReference entities
             $project.Project.ItemGroup.PackageReference |
-            Where-Object Include -like 'SecurityCodeScan*' |
+            Where-Object Include -like 'StyleCop.Analyzers*' |
             ForEach-Object { $_.SelectSingleNode('..').RemoveChild($_) | Out-Null }
 
             $packageReference = $project.CreateElement('PackageReference')
             $packageReferenceInclude = $project.CreateAttribute('Include')
-            $packageReferenceInclude.Value = $SecurityCodeScanPackageName
+            $packageReferenceInclude.Value = $StyleCopAnalyzersPackageName
             $packageReference.Attributes.Append($packageReferenceInclude) | Out-Null
             $packageReferenceVersion = $project.CreateAttribute('Version')
-            $packageReferenceVersion.Value = $SecurityCodeScanPackageVersion
+            $packageReferenceVersion.Value = $StyleCopAnalyzersPackageVersion
             $packageReference.Attributes.Append($packageReferenceVersion) | Out-Null
             $packageReferencePrivateAssets = $project.CreateAttribute('PrivateAssets')
             $packageReferencePrivateAssets.Value = 'All'
@@ -76,18 +76,18 @@ runs:
           else { # Old style Full DotNet Framework project with packages.config
 
             # create or get the full path to the solution path directory
-            if (-not $SecurityCodeScanPackagePath) {
+            if (-not $StyleCopAnalyzersPackagePath) {
               if (-not (Test-Path packages -PathType Container)) {
-                $SecurityCodeScanPackagePath = (New-Item -Name packages -ItemType Directory).FullName
+                $StyleCopAnalyzersPackagePath = (New-Item -Name packages -ItemType Directory).FullName
               }
               else {
-                $SecurityCodeScanPackagePath = (Get-Item -Path packages).FullName
+                $StyleCopAnalyzersPackagePath = (Get-Item -Path packages).FullName
               }
             }
 
-            # delete existing SecurityCodeScan analyzer entities
+            # delete existing StyleCopAnalyzers analyzer entities
             $project.Project.ItemGroup.Analyzer |
-            Where-Object Include -like '*SecurityCodeScan*' |
+            Where-Object Include -like '*StyleCop.Analyzers*' |
             ForEach-Object { $_.SelectSingleNode('..').RemoveChild($_) | Out-Null }
 
             # create RestoreProjectStyle element
@@ -102,14 +102,15 @@ runs:
 
             $analyzer = $project.CreateElement('Analyzer', $project.Project.NamespaceURI)
             $analyzerInclude = $project.CreateAttribute('Include')
-            # since the changes to the project will be discarded it is ok to set a Full path to SecurityCodeScanPackagePath
-            $analyzerInclude.Value = Join-Path -Path $SecurityCodeScanPackagePath -ChildPath "$($SecurityCodeScanPackageName).$($SecurityCodeScanPackageVersion)\analyzers\dotnet\SecurityCodeScan.VS2019.dll"
+            # since the changes to the project will be discarded it is ok to set a Full path to StyleCopAnalyzersPackagePath
+            $analyzerInclude.Value = Join-Path -Path $StyleCopAnalyzersPackagePath -ChildPath "$($StyleCopAnalyzersPackageName).$($StyleCopAnalyzersPackageVersion)\analyzers\dotnet\cs\StyleCop.Analyzers.dll"
             $analyzer.Attributes.Append($analyzerInclude) | Out-Null
             $itemGroup.AppendChild($analyzer) | Out-Null
 
+            # Not sure if this is needed - will not be running any code fixes here!
             $analyzer = $project.CreateElement('Analyzer', $project.Project.NamespaceURI)
             $analyzerInclude = $project.CreateAttribute('Include')
-            $analyzerInclude.Value = Join-Path -Path $SecurityCodeScanPackagePath -ChildPath "$($SecurityCodeScanPackageName).$($SecurityCodeScanPackageVersion)\analyzers\dotnet\YamlDotNet.dll"
+            $analyzerInclude.Value = Join-Path -Path $StyleCopAnalyzersPackagePath -ChildPath "$($StyleCopAnalyzersPackageName).$($StyleCopAnalyzersPackageVersion)\analyzers\dotnet\cs\StyleCop.Analyzers.CodeFixes.dll"
             $analyzer.Attributes.Append($analyzerInclude) | Out-Null
             $itemGroup.AppendChild($analyzer) | Out-Null
 
@@ -119,18 +120,18 @@ runs:
 
             $packagesConfig = [xml](Get-Content -LiteralPath $packagesConfigFile.FullName -Raw)
 
-            # delete existing SecurityCodeScan package entities
+            # delete existing StyleCopAnalyzers package entities
             $packagesConfig.packages.package |
-            Where-Object id -like '*SecurityCodeScan*' |
+            Where-Object id -like '*StyleCop.Analyzers*' |
             ForEach-Object { $_.SelectSingleNode('..').RemoveChild($_) | Out-Null }
 
-            # create a SecurityCodeScan package entity
+            # create a StyleCopAnalyzers package entity
             $package = $packagesConfig.CreateElement('package')
             $packageId = $packagesConfig.CreateAttribute('id')
-            $packageId.Value = $SecurityCodeScanPackageName
+            $packageId.Value = $StyleCopAnalyzersPackageName
             $package.Attributes.Append($packageId) | Out-Null
             $packageVersion = $packagesConfig.CreateAttribute('version')
-            $packageVersion.Value = $SecurityCodeScanPackageVersion
+            $packageVersion.Value = $StyleCopAnalyzersPackageVersion
             $package.Attributes.Append($packageVersion) | Out-Null
             $packageDevelopmentDependency = $packagesConfig.CreateAttribute('developmentDependency')
             $packageDevelopmentDependency.Value = 'true'
