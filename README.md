@@ -1,6 +1,6 @@
-# Security-Code-Scan Add Action
+# StyleCop.Analyzers Add Action
 
-This action is designed to run as part of a workflow that builds projects referencing NuGet [SecurityCodeScan.VS2019](https://www.nuget.org/packages/SecurityCodeScan.VS2019/).
+This action is designed to run as part of a workflow that builds projects referencing NuGet [StyleCop.Analyzers](http://www.nuget.org/packages/StyleCop.Analyzers/)
 
 It produces a GitHub compatible SARIF file for uploading to the repository 'Code scanning alerts'.
 
@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Set up projects
-        uses: security-code-scan/security-code-scan-add-action@v1.2
+        uses: felickz/StyleCopAnalyzers-add-action@main
 
       - name: Build
         run: |
@@ -31,10 +31,8 @@ jobs:
           dotnet build
         
       - name: Convert sarif for uploading to GitHub
-        uses: security-code-scan/security-code-scan-results-action@v1.3
+        uses: felickz/StyleCopAnalyzers-results-action@v1.3
         
       - name: Upload sarif	
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
 ```
-
-For .NET 4.x example see [FullDotNetWebApp demo repository](https://github.com/security-code-scan/FullDotNetWebApp).
